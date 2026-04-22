@@ -179,6 +179,18 @@
     </div>
 
     <script type="module">
+        // Dummy Firebase Config for local testing
+        if (typeof __firebase_config === 'undefined') {
+            window.__firebase_config = JSON.stringify({
+                apiKey: "dummy-api-key",
+                authDomain: "dummy.firebaseapp.com",
+                projectId: "dummy-project",
+                storageBucket: "dummy.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:abcdef123456"
+            });
+        }
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
