@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BRAINROT MULTIVERSE ONLINE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rubik+Mono+One&display=swap');
+
+        :root { --aura-color: #00ffcc; }
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Permanent Marker', cursive;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .bg-animate {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+        }
+
+        .main-button {
+            transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(0 0 20px var(--aura-color));
+        }
+
+        .main-button:active { transform: scale(0.7) rotate(15deg); filter: brightness(1.5); }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+            animation: particleFloat 1s ease-out forwards;
+        }
+
+        @keyframes particleFloat {
+            to { transform: translateY(-150px) translateX(var(--tx)) rotate(360deg); opacity: 0; }
+        }
+
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+        }
+
+        .pixel-font { font-family: 'Rubik Mono One', sans-serif; }
+        
+        .progress-fill { transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-animate min-h-screen pb-20">
+
+    <!-- Auth / Name Modal -->
+    <div id="name-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90">
+        <div class="glass-panel p-8 max-w-sm w-full text-center border-2 border-cyan-500">
+            <h2 class="text-3xl mb-4 pixel-font text-cyan-400">WER BIST DU?</h2>
+            <input type="text" id="username-input" placeholder="Dein Sigma Name..." class="w-full p-3 mb-4 bg-black border-2 border-white/20 rounded-lg text-center outline-none focus:border-cyan-500">
+            <button id="start-game-btn" class="w-full py-3 bg-cyan-600 hover:bg-cyan-400 text-white font-bold rounded-lg transition-all">GRIND BEGINNEN</button>
+            <p class="text-[10px] mt-4 opacity-50 uppercase tracking-widest">Du wirst in der Live-Datenbank gespeichert</p>
+        </div>
+    </div>
+
+    <!-- UI Overlay -->
+    <div class="fixed top-0 left-0 w-full p-4 z-40 grid grid-cols-1 md:grid-cols-3 gap-4 pointer-events-none">
+        <div class="glass-panel p-3 pointer-events-auto">
+            <h2 class="text-xs text-yellow-400 pixel-font tracking-tighter" id="rank-display">LVL 1 CROOK</h2>
+            <div class="h-2 w-full bg-white/10 rounded-full mt-1 overflow-hidden">
+                <div id="rank-progress" class="progress-fill h-full bg-yellow-400 w-0"></div>
+            </div>
+            <p class="text-[10px] mt-1 text-gray-400 uppercase">Status-Fortschritt</p>
+        </div>
+
+        <div class="glass-panel p-3 text-center pointer-events-auto border-b-2 border-cyan-500">
+            <h1 class="text-3xl text-white pixel-font" id="aura-display">0 AURA</h1>
+            <p class="text-[10px] text-cyan-300">Aura/Sek: <span id="aps-display">0</span></p>
+        </div>
+
+        <div class="glass-panel p-3 pointer-events-auto hidden md:block">
+            <h3 class="text-[10px] pixel-font text-pink-500 mb-1">GLOBAL TOP 5</h3>
+            <div id="leaderboard-list" class="text-[10px] space-y-1">Lade Highscores...</div>
+        </div>
+    </div>
+
+    <!-- Main Game -->
+    <main class="flex flex-col items-center justify-center min-h-screen p-4">
+        <div id="event-box" class="h-8 mb-4 text-xl font-bold text-red-500 text-center"></div>
+        
+        <div class="relative group" id="click-area">
+            <div id="main-emoji" class="text-[180px] md:text-[280px] cursor-pointer main-button select-none">🚽</div>
+            <div id="click-bonus-pop" class="absolute -top-10 left-1/2 -translate-x-1/2 text-white font-bold opacity-0 transition-opacity">RIZZ!</div>
+        </div>
+
+        <div class="mt-8 text-center glass-panel p-4 max-w-xs">
+            <p id="quote-display" class="text-sm italic text-gray-300">"Warte auf das Skibidi..."</p>
+            <div class="flex justify-center gap-2 mt-4">
+                <button id="rizz-check-btn" class="px-4 py-1 bg-pink-600 text-xs rounded-full hover:scale-110 transition">RIZZ CHECK</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Navigation Tabs -->
+    <nav class="fixed bottom-0 left-0 w-full glass-panel border-t-2 border-cyan-500 p-2 z-50 flex justify-around">
+        <button onclick="switchTab('shop')" class="tab-btn p-2 text-cyan-400 font-bold border-b-2 border-cyan-400">SHOP</button>
+        <button onclick="switchTab('stats')" class="tab-btn p-2 text-gray-400 font-bold">STATS</button>
+        <button onclick="switchTab('social')" class="tab-btn p-2 text-gray-400 font-bold">SOCIAL</button>
+    </nav>
+
+    <!-- Shop Panel -->
+    <div id="tab-shop" class="tab-content fixed bottom-16 left-0 w-full p-4 glass-panel max-h-[50vh] overflow-y-auto">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button id="upgrade-mewing" class="p-3 bg-black/50 rounded-xl border border-white/10 disabled:opacity-30">
+                <span class="block text-2xl">🤫</span>
+                <span class="block text-xs font-bold">Mewing</span>
+                <span class="text-[10px] text-green-400" id="mewing-cost">15</span>
+            </button>
+            <button id="upgrade-rizz" class="p-3 bg-black/50 rounded-xl border border-white/10 disabled:opacity-30">
+                <span class="block text-2xl">🎩</span>
+                <span class="block text-xs font-bold">Rizzler</span>
+                <span class="text-[10px] text-green-400" id="rizz-cost">100</span>
+            </button>
+            <button id="upgrade-fanum" class="p-3 bg-black/50 rounded-xl border border-white/10 disabled:opacity-30">
+                <span class="block text-2xl">🍕</span>
+                <span class="block text-xs font-bold">Fanum</span>
+                <span class="text-[10px] text-green-400" id="fanum-cost">1k</span>
+            </button>
+            <button id="upgrade-sigma" class="p-3 bg-black/50 rounded-xl border border-white/10 disabled:opacity-30">
+                <span class="block text-2xl">🗿</span>
+                <span class="block text-xs font-bold">Sigma</span>
+                <span class="text-[10px] text-green-400" id="sigma-cost">5k</span>
+            </button>
+            <button id="upgrade-goon" class="p-3 bg-black/50 rounded-xl border border-white/10 disabled:opacity-30">
+                <span class="block text-2xl">🏚️</span>
+                <span class="block text-xs font-bold">Cave</span>
+                <span class="text-[10px] text-green-400" id="goon-cost">25k</span>
+            </button>
+            <button id="upgrade-griddy" class="p-3 bg-black/50 rounded-xl border border-white/10 disabled:opacity-30">
+                <span class="block text-2xl">🏃‍♂️</span>
+                <span class="block text-xs font-bold">Griddy</span>
+                <span class="text-[10px] text-green-400" id="griddy-cost">100k</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Panel -->
+    <div id="tab-stats" class="tab-content hidden fixed bottom-16 left-0 w-full p-6 glass-panel text-center">
+        <h3 class="pixel-font text-cyan-400 mb-2 uppercase">Deine Karriere</h3>
+        <p class="text-sm">Gesamte Aura: <span id="stat-total" class="text-yellow-400">0</span></p>
+        <p class="text-sm">Prestige Level: <span id="stat-prestige" class="text-pink-500">0</span></p>
+        <button id="prestige-btn" class="mt-4 px-6 py-2 bg-purple-600 rounded-lg text-xs font-bold disabled:opacity-30">ASCENDEN (Braucht 1M Aura)</button>
+    </div>
+
+    <!-- Social / Leaderboard Panel -->
+    <div id="tab-social" class="tab-content hidden fixed bottom-16 left-0 w-full p-6 glass-panel">
+        <h3 class="pixel-font text-pink-500 mb-4 text-center uppercase">Globale Sigmas</h3>
+        <div id="full-leaderboard" class="space-y-2 text-sm max-h-40 overflow-y-auto"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Config (Runtime Provided)
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'brainrot-v2';
+
+        // Game State
+        const state = {
+            username: localStorage.getItem('br_user') || "",
+            aura: 0,
+            totalAura: 0,
+            aps: 0,
+            prestige: 0,
+            rankIndex: 0,
+            upgrades: {
+                mewing: { count: 0, cost: 15, pow: 1 },
+                rizz: { count: 0, cost: 120, pow: 8 },
+                fanum: { count: 0, cost: 1000, pow: 45 },
+                sigma: { count: 0, cost: 6000, pow: 180 },
+                goon: { count: 0, cost: 30000, pow: 750 },
+                griddy: { count: 0, cost: 150000, pow: 3000 }
+            }
+        };
+
+        const ranks = [
+            { n: "Lvl 1 Crook", t: 0, e: "🚽" },
+            { n: "Lvl 10 Gyatt", t: 1000, e: "🍑" },
+            { n: "Lvl 25 Rizzler", t: 10000, e: "🎩" },
+            { n: "Lvl 50 Ohio King", t: 100000, e: "👹" },
+            { n: "Lvl 100 Sigma", t: 1000000, e: "🗿" }
+        ];
+
+        // Logic & Functions
+        const saveToCloud = async () => {
+            if (!auth.currentUser) return;
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', auth.currentUser.uid);
+            await setDoc(userRef, {
+                name: state.username,
+                score: Math.floor(state.aura),
+                rank: ranks[state.rankIndex].n,
+                updatedAt: Date.now()
+            }, { merge: true });
+        };
+
+        const updateUI = () => {
+            document.getElementById('aura-display').innerText = Math.floor(state.aura).toLocaleString() + " AURA";
+            document.getElementById('aps-display').innerText = state.aps.toLocaleString();
+            document.getElementById('stat-total').innerText = Math.floor(state.totalAura).toLocaleString();
+            document.getElementById('stat-prestige').innerText = state.prestige;
+
+            // Rank logic
+            let next = ranks[state.rankIndex + 1];
+            if (next && state.totalAura >= next.t) {
+                state.rankIndex++;
+                document.getElementById('rank-display').innerText = ranks[state.rankIndex].n.toUpperCase();
+                document.getElementById('main-emoji').innerText = ranks[state.rankIndex].e;
+                showEvent("NEUER RANG!", "text-yellow-400");
+            }
+            if (next) {
+                const prog = ((state.totalAura - ranks[state.rankIndex].t) / (next.t - ranks[state.rankIndex].t)) * 100;
+                document.getElementById('rank-progress').style.width = Math.min(prog, 100) + "%";
+            }
+
+            // Upgrade costs
+            Object.keys(state.upgrades).forEach(id => {
+                const u = state.upgrades[id];
+                const btn = document.getElementById(`upgrade-${id}`);
+                const cost = Math.floor(u.cost * Math.pow(1.15, u.count));
+                document.getElementById(`${id}-cost`).innerText = cost > 1000 ? (cost/1000).toFixed(1) + 'k' : cost;
+                btn.disabled = state.aura < cost;
+            });
+
+            document.getElementById('prestige-btn').disabled = state.aura < 1000000;
+        };
+
+        const showEvent = (msg, cls = "text-red-500") => {
+            const eb = document.getElementById('event-box');
+            eb.innerText = msg;
+            eb.className = `h-8 mb-4 text-xl font-bold animate-bounce ${cls}`;
+            setTimeout(() => eb.innerText = "", 2000);
+        };
+
+        const spawnParticle = (x, y, txt = "+1") => {
+            const p = document.createElement('div');
+            p.className = 'particle text-2xl font-bold text-white';
+            p.innerText = txt;
+            p.style.left = x + 'px';
+            p.style.top = y + 'px';
+            p.style.setProperty('--tx', (Math.random()*100-50)+'px');
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 1000);
+        };
+
+        // Tabs
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('text-cyan-400', 'border-b-2', 'border-cyan-400'));
+            event.target.classList.add('text-cyan-400', 'border-b-2', 'border-cyan-400');
+        };
+
+        // Click Area
+        document.getElementById('click-area').addEventListener('click', (e) => {
+            const gain = 1 + (state.prestige * 5);
+            state.aura += gain;
+            state.totalAura += gain;
+            spawnParticle(e.clientX, e.clientY, `+${gain}`);
+            updateUI();
+        });
+
+        // Shop Listeners
+        Object.keys(state.upgrades).forEach(id => {
+            document.getElementById(`upgrade-${id}`).addEventListener('click', () => {
+                const u = state.upgrades[id];
+                const cost = Math.floor(u.cost * Math.pow(1.15, u.count));
+                if (state.aura >= cost) {
+                    state.aura -= cost;
+                    u.count++;
+                    state.aps += u.pow;
+                    updateUI();
+                }
+            });
+        });
+
+        // Rizz Check Mini Game
+        document.getElementById('rizz-check-btn').addEventListener('click', () => {
+            if (Math.random() > 0.5) {
+                const b = Math.floor(state.aura * 0.05) + 10;
+                state.aura += b;
+                showEvent(`RIZZ GEFUNDEN! +${b}`, "text-pink-400");
+            } else {
+                state.aura = Math.floor(state.aura * 0.95);
+                showEvent("L RIZZ... -5%", "text-gray-500");
+            }
+            updateUI();
+        });
+
+        // Prestige
+        document.getElementById('prestige-btn').addEventListener('click', () => {
+            if (state.aura >= 1000000) {
+                state.prestige++;
+                state.aura = 0;
+                state.totalAura = 0;
+                state.aps = 0;
+                state.rankIndex = 0;
+                Object.keys(state.upgrades).forEach(k => state.upgrades[k].count = 0);
+                showEvent("ASCENDED! DEINE AURA IST JETZT HEILIG", "text-purple-400");
+                updateUI();
+            }
+        });
+
+        // Leaderboard Listener
+        const setupLeaderboard = () => {
+            const q = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+            onSnapshot(q, (snap) => {
+                let data = [];
+                snap.forEach(doc => data.push(doc.data()));
+                data.sort((a, b) => b.score - a.score);
+                
+                const shortList = document.getElementById('leaderboard-list');
+                const fullList = document.getElementById('full-leaderboard');
+                
+                shortList.innerHTML = data.slice(0, 5).map((u, i) => 
+                    `<div>#${i+1} ${u.name.substring(0,8)}...: ${Math.floor(u.score).toLocaleString()}</div>`
+                ).join('');
+
+                fullList.innerHTML = data.map((u, i) => 
+                    `<div class="flex justify-between p-2 bg-white/5 rounded">
+                        <span>#${i+1} ${u.name}</span>
+                        <span class="text-cyan-400">${Math.floor(u.score).toLocaleString()}</span>
+                    </div>`
+                ).join('');
+            }, (err) => console.log("LB Error", err));
+        };
+
+        // Auth & Init
+        document.getElementById('start-game-btn').addEventListener('click', async () => {
+            const name = document.getElementById('username-input').value.trim();
+            if (name.length < 2) return;
+            state.username = name;
+            localStorage.setItem('br_user', name);
+            document.getElementById('name-modal').classList.add('hidden');
+            
+            // Auth first
+            await signInAnonymously(auth);
+            setupLeaderboard();
+            
+            // Game loops
+            setInterval(() => {
+                if (state.aps > 0) {
+                    const g = state.aps / 10;
+                    state.aura += g;
+                    state.totalAura += g;
+                    updateUI();
+                }
+            }, 100);
+
+            setInterval(saveToCloud, 10000); // Cloud Save alle 10 Sek
+        });
+
+        if (state.username) {
+            document.getElementById('username-input').value = state.username;
+        }
+
+    </script>
+</body>
+</html>
